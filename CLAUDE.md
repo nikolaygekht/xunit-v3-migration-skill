@@ -1,6 +1,6 @@
 # xunit-v3-migration — skill development repository
 
-This repository is the **development home of a single Claude Code skill**: `xunit-v3-migration`, which migrates .NET test projects from xUnit v2 to xUnit v3. Work here is about improving the skill itself, not migrating anything in this repo.
+This repository is the **development home of a single Claude Code skill**: `xunit-v3-migration`, which migrates .NET test projects to xUnit v3 — from xUnit v2 or from NUnit. Work here is about improving the skill itself, not migrating anything in this repo.
 
 ## Layout
 
@@ -9,7 +9,8 @@ skills/                     # the skill content — what gets installed
 ├── SKILL.md                # entry point: frontmatter (name, description) + workflow
 └── references/
     ├── api-changes.md      # v2→v3 namespace/type relocation tables, signatures
-    └── extensibility.md    # porting custom orderers, data attributes, frameworks
+    ├── extensibility.md    # porting custom orderers, data attributes, frameworks
+    └── nunit-migration.md  # NUnit→xUnit v3 attribute/lifecycle/assertion mapping
 README.md                   # human-facing description
 INSTALL.md                  # how to install globally or per-project
 ```
@@ -36,4 +37,4 @@ The `skill-creator` skill (if available in your session) can run benchmark evals
 
 ## History
 
-Authored June 2026 from the official xUnit migration guides; validated on the Gehtsoft.EF solution (2 test projects, 2,864 tests, custom `ITestCaseOrderer`, AwesomeAssertions) with zero test loss.
+Authored June 2026 from the official xUnit migration guides; validated on a real production solution (2 test projects, 2,864 tests, custom `ITestCaseOrderer`, AwesomeAssertions) with zero test loss. NUnit→xUnit v3 support added June 2026 from a verified migration of a 36-test NUnit 4 project (notes in `test/NUNit.Migration.md`), with assertion mappings targeting native xUnit `Assert` rather than the AwesomeAssertions path that run used.

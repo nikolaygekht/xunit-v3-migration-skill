@@ -1,11 +1,13 @@
 ---
 name: xunit-v3-migration
-description: Migrate .NET test projects from xUnit v2 to xUnit v3 (xunit.v3 packages). Use this skill whenever the user asks to migrate, upgrade, or convert tests to xUnit v3 / xunit.v3, mentions the xUnit v2-to-v3 migration, or asks to modernize the xUnit test stack — even if they only say "upgrade xunit" or "move to the new xunit". Also use it to assess how much work an xUnit v3 migration would be for a solution.
+description: Migrate .NET test projects to xUnit v3 (xunit.v3 packages) — from xUnit v2 or from NUnit. Use this skill whenever the user asks to migrate, upgrade, or convert tests to xUnit v3 / xunit.v3, mentions the xUnit v2-to-v3 migration, asks to move tests off NUnit / from NUnit to xUnit / replace NUnit, or asks to modernize the test stack — even if they only say "upgrade xunit", "move to the new xunit", or "switch to xunit". Also use it to assess how much work such a migration would be for a solution.
 ---
 
-# xUnit v2 → v3 Migration
+# xUnit v3 Migration (from xUnit v2 or NUnit)
 
 Migrate test projects from xUnit v2 (`xunit` 2.x) to xUnit v3 (`xunit.v3`). Based on the official guide: https://xunit.net/docs/getting-started/v3/migration
+
+The workflow below is written for the v2→v3 case. **Migrating from NUnit follows the same five steps with the same safety invariants** — see "Migrating from NUnit" after Step 5 for what changes per step.
 
 The big architectural shift: **v3 test projects are stand-alone executables**, not libraries loaded by a runner. This drives most of the mechanical changes (OutputType, package names, removal of `xunit.abstractions`). `dotnet test` keeps working through `xunit.runner.visualstudio` 3.x.
 
@@ -105,6 +107,21 @@ After the build is clean, the `xunit.analyzers` package surfaces v3-specific iss
 4. **Deliberate-failure check** (required if the project uses a fluent assertion library): temporarily break one assertion, run that single test (`dotnet test --filter ...`), and confirm it reports as a normal test failure with the expected message — not "test framework could not be detected" or a raw `InvalidOperationException`. Revert the change **and rebuild** — a later run of the stale binary will otherwise show a phantom failure. A green suite never exercises the assertion library's failure path, so this is the only way to prove runtime compatibility.
 5. v3 bonus check: the project now runs directly — `dotnet run --project <test.csproj>` (use `-- -?` for runner switches). Useful for diagnosing discovery problems because it prints them to the console.
 6. Re-run any CI/coverage scripts found in Step 1 (`dotnet test --collect ...` keeps working in VSTest mode).
+
+## Migrating from NUnit
+
+Same per-project loop (inventory → baseline → packages/csproj → code fixes → verify) and the same invariants: baseline test count, post-migration count comparison, environmental-vs-migration triage. Differences per step:
+
+1. **Inventory** — find projects and the patterns that need work:
+   ```bash
+   grep -rl 'PackageReference Include="NUnit"' --include='*.csproj' .
+   # per project, the items needing more than mechanical attribute swaps:
+   grep -rn 'TestCaseSource\|ExpectedResult\|\[Values\|\[Range(\|\[Random(\|SetUpFixture\|OneTimeSetUp\|Assert\.Multiple\|TestContext\.\|Assume\.\|\[Retry\|\[Repeat\|\[Order(' --include='*.cs' <test-project-dir>
+   ```
+2. **Baseline** — count by **running** the suite, not `--list-tests`: each NUnit `[TestCase]`/`[Values]` combination must map 1:1 to a theory row after migration, and unserializable theory rows collapse in listings but not in execution.
+3. **Packages** — remove `NUnit`, `NUnit3TestAdapter`, `NUnit.Analyzers`; add `xunit.v3`, `xunit.runner.visualstudio` 3.x, `xunit.analyzers`; keep `Microsoft.NET.Test.Sdk`. Same `<OutputType>Exe</OutputType>` and TFM prerequisites as Step 3 above.
+4. **Code fixes** — read `references/nunit-migration.md` for the full attribute, lifecycle, parameterized-test, `TestContext`, and assertion mapping (NUnit `Assert`/`ClassicAssert`/`Assert.That` constraints → xUnit `Assert`). The two semantic traps to keep in mind throughout: xUnit creates **a new test-class instance per test** (NUnit reuses one per fixture), and xUnit runs test classes **in parallel by default** (NUnit is sequential by default).
+5. **Verify** — unchanged. The deliberate-failure check is only required if a fluent assertion library (FluentAssertions, AwesomeAssertions, Shouldly) is in play; with plain xUnit `Assert` the count comparison is the main gate.
 
 ## Gotchas
 
